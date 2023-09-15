@@ -1,0 +1,45 @@
+import os
+from flask import Flask, request, jsonify
+
+import google.generativeai as palm
+
+app = Flask(__name__)
+
+# Define a route for generating YouTube titles
+@app.route('/generateYtTitle', methods=['POST'])
+def generate_youtube_titles():
+    # Retrieve the API key and context from the request data
+    data = request.get_json()
+    api_key = data.get('API-Key')
+    context = data.get('context')
+
+    # Validate the input API key and context
+    if not api_key or not context:
+        return jsonify({'error': 'API-Key and context are required'}), 400
+
+    try:
+        # Initialize Google Palm API with the provided API key
+        palm.configure(api_key=api_key)
+
+        # Create a prompt for the Google Palm API
+        prompt = f"Please ignore all previous instructions. Please respond only in the English language. You are a YouTuber with a large fan following.   Do not self reference. Do not explain what you are doing. Generate eye catchy and amazing titles that will hook the audience for this context: {context}. Only 5 titles you have to generate. The titles should not be more than 100 characters long. The title should have to match the context. The title should be good for videos and not be generic titles."
+
+        # Use the Google Palm API to generate titles
+        completion = palm.generate_text(
+            model='models/text-bison-001',  # You can specify the model here
+            prompt=prompt,
+            temperature=0.7,  # Adjust the temperature for creativity
+            max_output_tokens=100,  # Limit the length of generated titles
+        )
+
+        generated_titles = completion.result.strip().split('\n')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({'titles': generated_titles})
+
+if __name__ == '__main__':
+    # Specify the port (change as needed)
+    port = 5000
+
+    app.run(port=port)
